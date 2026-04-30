@@ -1,4 +1,4 @@
-const CACHE_NAME = "cosmic-hopper-v6";
+const CACHE_NAME = "cosmic-hopper-v7";
 const BASE_PATH = "/cosmic-hopper";
 
 const urlsToCache = [

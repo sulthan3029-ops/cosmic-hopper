@@ -53,6 +53,7 @@ let showHighScore = false;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const soundBuffers = {};
 let soundsReady = false;
+let soundsReadyPromise = null;
 
 let bgMusicSource = null;
 let bgMusicGain = null;
@@ -126,6 +127,32 @@ function setBgMusicVolume(volume) {
     }
 }
 
+function ensureGameAudioRunning() {
+    if (!gameStarted || gameOver) return;
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+    }
+
+    if (!bgMusicStarted || !bgMusicSource) {
+        startBgMusic(savedVolume);
+    }
+}
+
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        ensureGameAudioRunning();
+    }
+});
+
+window.addEventListener("focus", () => {
+    ensureGameAudioRunning();
+});
+
+window.addEventListener("pageshow", () => {
+    ensureGameAudioRunning();
+});
+
 // ✨ EFFECT START & RESTART
 let startEffect = 0;
 let restartEffect = 0;
@@ -168,7 +195,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     warmUpSpeech();
 
-    Promise.all([
+   soundsReadyPromise = Promise.all([
     loadSoundBuffer("jump", "jump.wav"),
     loadSoundBuffer("start", "startsound.ogg"),
     loadSoundBuffer("crash", "crash.ogg"),
@@ -184,8 +211,16 @@ window.addEventListener("DOMContentLoaded", function() {
     }, 30);
 });
 
-function startGameFromMenu(firstLaunch = false) {
+async function startGameFromMenu(firstLaunch = false) {
     showHighScore = false;
+
+    if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+    }
+
+    if (soundsReadyPromise) {
+        await soundsReadyPromise;
+    }
 
     playSound("start", savedVolume);
 
@@ -831,8 +866,10 @@ ctx.textBaseline = "alphabetic";
     }
 
     else {
-        bird.velocity += gravity;
-        bird.y += bird.velocity;
+    ensureGameAudioRunning();
+
+    bird.velocity += gravity;
+    bird.y += bird.velocity;
 
     // 🛸 UFO EMOJI FIX (PROPORSI BAGUS)
 
